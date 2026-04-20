@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Homeschool Hub — Math & Science</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <h1>Homeschool Hub</h1>
+    <p class="tagline">Weekly Math &amp; Science Syllabus — 1st, 3rd, and 5th Grade</p>
+  </div>
+</header>
+
+<div class="view-switch">
+  <button class="view-btn active" data-view="syllabus">📘 Weekly Syllabus</button>
+  <button class="view-btn" data-view="projects">🧪 Projects &amp; Adventures</button>
+</div>
+
+<nav class="controls" id="syllabusControls">
+  <div class="control-group">
+    <label for="weekSelect">Week</label>
+    <div class="week-nav">
+      <button id="prevWeek" aria-label="Previous week">&larr;</button>
+      <select id="weekSelect"></select>
+      <button id="nextWeek" aria-label="Next week">&rarr;</button>
+    </div>
+  </div>
+  <div class="control-group grade-tabs" role="tablist">
+    <button class="grade-tab active" data-grade="1" role="tab">1st Grade</button>
+    <button class="grade-tab" data-grade="3" role="tab">3rd Grade</button>
+    <button class="grade-tab" data-grade="5" role="tab">5th Grade</button>
+    <button class="grade-tab all" data-grade="all" role="tab">All Grades</button>
+  </div>
+  <div class="control-group">
+    <button id="printBtn" class="secondary">Print Week</button>
+    <button id="progressBtn" class="secondary">Progress</button>
+    <button id="settingsBtn" class="secondary">⚙ Data</button>
+  </div>
+</nav>
+
+<input type="file" id="importFileInput" accept="application/json,.json" style="display:none" />
+
+<main id="weekView" class="week-view"></main>
+
+<main id="projectsView" class="projects-view hidden">
+  <div class="projects-header">
+    <div>
+      <h2>Projects &amp; Adventures</h2>
+      <p class="projects-sub">Build things. Go outside. Learn by doing.</p>
+    </div>
+    <button id="addProjectBtn" class="btn-primary">+ Add New Idea</button>
+  </div>
+  <nav class="category-tabs" id="categoryTabs">
+    <button class="cat-tab active" data-cat="all">All</button>
+    <button class="cat-tab" data-cat="build">🔬 Build / Experiment</button>
+    <button class="cat-tab" data-cat="hike">🥾 Hikes / Nature</button>
+    <button class="cat-tab" data-cat="camping">⛺ Camping</button>
+    <button class="cat-tab" data-cat="fishing">🎣 Fishing</button>
+  </nav>
+  <div id="projectsList" class="projects-list"></div>
+</main>
+
+<!-- Add project modal -->
+<div id="addProjectModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="modal-close" id="closeAddProject" aria-label="Close">&times;</button>
+    <h2>Add a New Project</h2>
+    <form id="addProjectForm" class="project-form">
+      <label>Title<input type="text" name="title" required maxlength="80" placeholder="e.g. Build a birdhouse" /></label>
+      <label>Category
+        <select name="category" required>
+          <option value="build">🔬 Build / Experiment</option>
+          <option value="hike">🥾 Nature Walk / Hike</option>
+          <option value="camping">⛺ Camping</option>
+          <option value="fishing">🎣 Fishing</option>
+        </select>
+      </label>
+      <fieldset class="age-group">
+        <legend>Ages (check all that apply)</legend>
+        <label><input type="checkbox" name="ages" value="1" checked /> 1st</label>
+        <label><input type="checkbox" name="ages" value="3" checked /> 3rd</label>
+        <label><input type="checkbox" name="ages" value="5" checked /> 5th</label>
+      </fieldset>
+      <label>Materials (one per line)<textarea name="materials" rows="4" placeholder="Hammer&#10;Nails&#10;Wood scraps"></textarea></label>
+      <label>Steps (one per line)<textarea name="steps" rows="5" placeholder="1. Measure the wood&#10;2. Cut pieces..."></textarea></label>
+      <label>Lesson / What we're teaching<textarea name="lesson" rows="3" placeholder="What science or skill is this building?"></textarea></label>
+      <div class="form-actions">
+        <button type="button" class="secondary" id="cancelProject">Cancel</button>
+        <button type="submit" class="btn-primary">Save Project</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Activity modal -->
+<div id="activityModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="modal-close" id="closeModal" aria-label="Close">&times;</button>
+    <div id="activityContainer"></div>
+  </div>
+</div>
+
+<!-- Settings / data modal -->
+<div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="modal-close" id="closeSettings" aria-label="Close">&times;</button>
+    <h2>Export / Import Data</h2>
+    <p style="color:var(--c-muted);">Back up your progress, custom projects, and week state — or restore from a file. Everything is stored in your browser; exporting creates a shareable JSON file.</p>
+    <div class="settings-actions">
+      <button id="exportBtn" class="btn-primary">⬇ Export All Data</button>
+      <button id="importBtn" class="secondary">⬆ Import Data</button>
+    </div>
+    <div id="settingsStatus" class="feedback"></div>
+    <hr style="margin:1.5rem 0;border:none;border-top:1px solid #e0e4ed;" />
+    <details>
+      <summary style="cursor:pointer;font-weight:600;">What's included in the export?</summary>
+      <ul style="color:var(--c-muted);font-size:0.9rem;">
+        <li>Completion checkboxes for every week/grade/subject</li>
+        <li>Current week and grade selection</li>
+        <li>Custom projects you've added</li>
+        <li>App version (for future compatibility)</li>
+      </ul>
+    </details>
+  </div>
+</div>
+
+<!-- Progress modal -->
+<div id="progressModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="modal-close" id="closeProgress" aria-label="Close">&times;</button>
+    <h2>Progress Tracker</h2>
+    <div id="progressContent"></div>
+    <button id="resetProgress" class="danger">Reset All Progress</button>
+  </div>
+</div>
+
+<footer class="footer">
+  <p>Built for home use. Click any <strong>activity</strong> button to launch an interactive widget. Mark items complete to track the week.</p>
+</footer>
+
+<script src="curriculum.js"></script>
+<script src="projects.js"></script>
+<script src="activities.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
