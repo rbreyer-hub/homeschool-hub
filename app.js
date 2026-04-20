@@ -39,32 +39,78 @@ function isComplete(week, grade, subject) {
 
 function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+const SUBJECT_META = {
+  math:    { icon: "M", label: "Math",    cls: "subject-math" },
+  science: { icon: "S", label: "Science", cls: "subject-science" },
+  reading: { icon: "R", label: "Reading", cls: "subject-reading" },
+  writing: { icon: "W", label: "Writing", cls: "subject-writing" }
+};
+
+function lessonKey(week, grade, subject, day) { return `w${week}-g${grade}-${subject}-day${day}`; }
+function isLessonDone(week, grade, subject, day) { return loadProgress()[lessonKey(week, grade, subject, day)] === true; }
+function markLessonDone(week, grade, subject, day, done) {
+  const p = loadProgress();
+  p[lessonKey(week, grade, subject, day)] = done;
+  saveProgress(p);
+  updateWeekProgressBar();
+}
+
 function renderSubjectBlock(grade, subjectKey, block) {
-  const isMath = subjectKey === 'math';
-  const icon = isMath ? 'M' : 'S';
-  const cls = isMath ? 'subject-math' : 'subject-science';
+  const meta = SUBJECT_META[subjectKey];
+  const isLiteracy = subjectKey === 'reading' || subjectKey === 'writing';
   const activityBtns = (block.activities || []).map((a, i) => {
-    return `<button class="activity-btn ${isMath ? 'math' : 'science'}" data-act="${i}" data-grade="${grade}" data-subject="${subjectKey}">&#9658; ${escHtml(a.label)}</button>`;
+    return `<button class="activity-btn ${subjectKey}" data-act="${i}" data-grade="${grade}" data-subject="${subjectKey}">&#9658; ${escHtml(a.label)}</button>`;
   }).join('');
   const objs = (block.objectives || []).map(o => `<li>${escHtml(o)}</li>`).join('');
   const resources = (block.resources || []).map(r => `<li><a href="${escHtml(r.url)}" target="_blank" rel="noopener">${escHtml(r.label)}</a> &#8599;</li>`).join('');
+
+  let mainContent = '';
+  if (isLiteracy) {
+    const focus = block.focus ? `<p class="focus-line">${escHtml(block.focus)}</p>` : '';
+    const lessonRows = (block.lessons || []).map(l => {
+      const done = isLessonDone(state.week, grade, subjectKey, l.day);
+      return `
+        <div class="lesson-row ${done ? 'done' : ''}">
+          <label class="lesson-check">
+            <input type="checkbox" class="lesson-checkbox"
+                   data-grade="${grade}" data-subject="${subjectKey}" data-day="${l.day}"
+                   ${done ? 'checked' : ''} />
+            <span class="day-chip">Day ${l.day}</span>
+          </label>
+          <div class="lesson-body">
+            <div class="lesson-title">${escHtml(l.title)} <span class="lesson-duration">${escHtml(l.duration || '')}</span></div>
+            <div class="lesson-task">${escHtml(l.task)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    mainContent = `
+      ${focus}
+      <div class="section-heading">4 Daily Lessons</div>
+      <div class="lessons-list">${lessonRows}</div>
+    `;
+  } else {
+    mainContent = `
+      <div class="section-heading">Objectives</div>
+      <ul class="objectives">${objs}</ul>
+      <div class="section-heading">Interactive Activities</div>
+      <div class="activities">${activityBtns || '<em style="color:#5a6378;">Use resources &amp; challenge below.</em>'}</div>
+    `;
+  }
+
   const complete = isComplete(state.week, grade, subjectKey);
   return `
-    <div class="subject-block ${cls}">
+    <div class="subject-block ${meta.cls}">
       <h3 class="subject-title">
-        <span class="subject-icon">${icon}</span>
-        ${isMath ? 'Math' : 'Science'}
+        <span class="subject-icon">${meta.icon}</span>
+        ${meta.label}
       </h3>
       <p class="topic">${escHtml(block.topic || '')}</p>
 
-      <div class="section-heading">Objectives</div>
-      <ul class="objectives">${objs}</ul>
-
-      <div class="section-heading">Interactive Activities</div>
-      <div class="activities">${activityBtns || '<em style="color:#5a6378;">Use resources &amp; challenge below.</em>'}</div>
+      ${mainContent}
 
       <div class="challenge">
-        <strong>&#128161; Thinking Challenge:</strong> ${escHtml(block.challenge || '')}
+        <strong>&#128161; ${isLiteracy ? 'Bonus Challenge' : 'Thinking Challenge'}:</strong> ${escHtml(block.challenge || '')}
       </div>
 
       <div class="section-heading">Supplementary Resources</div>
@@ -75,7 +121,7 @@ function renderSubjectBlock(grade, subjectKey, block) {
           <input type="checkbox" class="complete-check"
                  data-grade="${grade}" data-subject="${subjectKey}"
                  ${complete ? 'checked' : ''} />
-          Mark ${isMath ? 'math' : 'science'} complete
+          Mark ${meta.label.toLowerCase()} complete
         </label>
       </div>
     </div>
@@ -91,23 +137,31 @@ function renderWeek() {
 
   const gradesToShow = state.grade === 'all' ? ['1', '3', '5'] : [state.grade];
 
+  const literacyWeek = (typeof LITERACY !== 'undefined' && LITERACY[weekIdx]) ? LITERACY[weekIdx] : null;
+
   const sections = gradesToShow.map(g => {
     const gData = week.grades[g];
     if (!gData) return '';
-    const mathHtml = renderSubjectBlock(g, 'math', gData.math);
-    const sciHtml = renderSubjectBlock(g, 'science', gData.science);
+    const mathHtml    = renderSubjectBlock(g, 'math',    gData.math);
+    const sciHtml     = renderSubjectBlock(g, 'science', gData.science);
+    const litData     = literacyWeek && literacyWeek.grades[g];
+    const readingHtml = litData ? renderSubjectBlock(g, 'reading', litData.reading) : '';
+    const writingHtml = litData ? renderSubjectBlock(g, 'writing', litData.writing) : '';
     return `
       <section class="grade-section" data-grade="${g}">
         <span class="grade-label">${g === '1' ? '1st Grade' : g === '3' ? '3rd Grade' : '5th Grade'}</span>
         ${mathHtml}
         ${sciHtml}
+        ${readingHtml}
+        ${writingHtml}
       </section>
     `;
   }).join('');
 
-  const totalCount = gradesToShow.length * 2;
+  const subjectList = ['math', 'science', 'reading', 'writing'];
+  const totalCount = gradesToShow.length * subjectList.length;
   const doneCount = gradesToShow.reduce((acc, g) => {
-    return acc + (isComplete(weekNum, g, 'math') ? 1 : 0) + (isComplete(weekNum, g, 'science') ? 1 : 0);
+    return acc + subjectList.reduce((a, s) => a + (isComplete(weekNum, g, s) ? 1 : 0), 0);
   }, 0);
   const pct = Math.round((doneCount / totalCount) * 100);
 
@@ -139,14 +193,30 @@ function renderWeek() {
       markComplete(weekNum, chk.dataset.grade, chk.dataset.subject, chk.checked);
     };
   });
+  view.querySelectorAll('.lesson-checkbox').forEach(chk => {
+    chk.onchange = () => {
+      markLessonDone(weekNum, chk.dataset.grade, chk.dataset.subject, parseInt(chk.dataset.day), chk.checked);
+      chk.closest('.lesson-row').classList.toggle('done', chk.checked);
+      // If all 4 days are done, auto-check the subject-complete box
+      const subj = chk.dataset.subject;
+      const grade = chk.dataset.grade;
+      const allDone = [1,2,3,4].every(d => isLessonDone(weekNum, grade, subj, d));
+      if (allDone && !isComplete(weekNum, grade, subj)) {
+        markComplete(weekNum, grade, subj, true);
+        const subjBox = view.querySelector(`.complete-check[data-grade="${grade}"][data-subject="${subj}"]`);
+        if (subjBox) subjBox.checked = true;
+      }
+    };
+  });
 }
 
 function updateWeekProgressBar() {
   const weekNum = state.week;
   const gradesToShow = state.grade === 'all' ? ['1', '3', '5'] : [state.grade];
-  const totalCount = gradesToShow.length * 2;
+  const subjectList = ['math', 'science', 'reading', 'writing'];
+  const totalCount = gradesToShow.length * subjectList.length;
   const doneCount = gradesToShow.reduce((acc, g) => {
-    return acc + (isComplete(weekNum, g, 'math') ? 1 : 0) + (isComplete(weekNum, g, 'science') ? 1 : 0);
+    return acc + subjectList.reduce((a, s) => a + (isComplete(weekNum, g, s) ? 1 : 0), 0);
   }, 0);
   const pct = Math.round((doneCount / totalCount) * 100);
   const fill = document.getElementById('weekFill');
@@ -194,7 +264,7 @@ function renderProgress() {
   ['1', '3', '5'].forEach(g => {
     let gDone = 0, gAll = 0;
     for (let w = 1; w <= CURRICULUM.length; w++) {
-      ['math', 'science'].forEach(s => {
+      ['math', 'science', 'reading', 'writing'].forEach(s => {
         gAll++;
         if (progress[progressKey(w, g, s)]) gDone++;
       });
@@ -213,7 +283,7 @@ function renderProgress() {
 }
 
 // ---------- Export / Import ----------
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const DATA_KEYS = [STORAGE_KEY, STATE_KEY, 'homeschool-projects-v1'];
 
 function exportData() {

@@ -6,7 +6,8 @@ Works as a **Chrome extension** or a plain static site.
 
 ## Features
 
-- **36-week syllabus** across 3 grade levels × 2 subjects (math + science)
+- **36-week syllabus** across 3 grade levels × 4 subjects (**math, science, reading, writing**)
+- **Reading & Writing**: 4 daily lessons per week per grade, per-day checkboxes, progressive phonics → comprehension → genre study for reading; letter formation → paragraphs → multi-paragraph essays for writing
 - **30+ interactive activity widgets** (arithmetic drills, matching games, fractions, place value, coordinates, quizzes, and more)
 - **Thinking Challenges** designed to build analytical & critical thinking
 - **Supplementary resource links** (Khan Academy, NASA, Mystery Science, USGS, etc.)
@@ -57,7 +58,8 @@ homeschool-app/
 ├── background.js      — Service worker (opens app on icon click)
 ├── index.html         — Main app shell
 ├── styles.css         — All styles
-├── curriculum.js      — 36-week curriculum data
+├── curriculum.js      — 36-week math & science curriculum data
+├── literacy.js        — 36-week reading & writing curriculum (4 lessons/week)
 ├── projects.js        — Seed project & adventure data + storage helpers
 ├── activities.js      — Interactive widgets (30+ types)
 ├── app.js             — Navigation, rendering, export/import, progress
